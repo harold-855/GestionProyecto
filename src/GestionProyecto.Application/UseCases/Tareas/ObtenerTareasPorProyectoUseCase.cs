@@ -1,4 +1,5 @@
 using GestionProyecto.Application.DTOs.Tareas;
+using GestionProyecto.Application.Exceptions;
 using GestionProyecto.Application.Interfaces.Repositories;
 
 namespace GestionProyecto.Application.UseCases.Tareas;
@@ -18,20 +19,14 @@ public class ObtenerTareasPorProyectoUseCase
 
     public async Task<IReadOnlyList<TareaDto>> EjecutarAsync(Guid proyectoId)
     {
-        // 1. Comprobar que el proyecto existe.
         var proyecto = await _proyectoRepository.ObtenerPorIdAsync(proyectoId);
 
         if (proyecto is null)
-        {
-            throw new InvalidOperationException(
+            throw new NotFoundException(
                 "No se encontró el proyecto indicado.");
-        }
 
-        // 2. Obtener las tareas del proyecto.
-        var tareas = await _tareaRepository
-            .ObtenerPorProyectoAsync(proyectoId);
+        var tareas = await _tareaRepository.ObtenerPorProyectoAsync(proyectoId);
 
-        // 3. Convertir las entidades en DTOs.
         var respuesta = tareas.Select(tarea => new TareaDto
         {
             Id = tarea.Id,
@@ -44,7 +39,6 @@ public class ObtenerTareasPorProyectoUseCase
             EstaVencida = tarea.EstaVencida()
         }).ToList();
 
-        // 4. Devolver las tareas.
         return respuesta;
     }
 }

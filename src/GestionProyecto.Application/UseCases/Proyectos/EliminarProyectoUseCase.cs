@@ -1,3 +1,4 @@
+using GestionProyecto.Application.Exceptions;
 using GestionProyecto.Application.Interfaces;
 using GestionProyecto.Application.Interfaces.Repositories;
 
@@ -20,25 +21,19 @@ public class EliminarProyectoUseCase
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        // 1. Buscar el proyecto incluyendo sus tareas.
-        var proyecto = await _proyectoRepository
-            .ObtenerPorIdConTareasAsync(id);
+        var proyecto = await _proyectoRepository.ObtenerPorIdConTareasAsync(id);
 
-        // 2. Comprobar si existe.
         if (proyecto is null)
             return false;
 
-        // 3. Comprobar si tiene tareas pendientes.
         if (proyecto.TieneTareasPendientes())
         {
-            throw new InvalidOperationException(
+            throw new BusinessRuleException(
                 "No se puede eliminar un proyecto que tenga tareas pendientes.");
         }
 
-        // 4. Preparar la eliminación.
         _proyectoRepository.Eliminar(proyecto);
 
-        // 5. Guardar los cambios.
         await _unitOfWork.GuardarCambiosAsync(cancellationToken);
 
         return true;

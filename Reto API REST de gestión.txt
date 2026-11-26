@@ -1,0 +1,28 @@
+**🚀 Reto: API REST de gestión de proyectos y tareas**
+
+Desarrollar una API REST que permita gestionar proyectos y sus respectivas tareas.
+
+**Entidades:**
+- **Proyecto:** ID, nombre, descripción, fecha de inicio y fecha de finalización.
+- **Tarea:** ID, título, descripción, estado (pendiente, en progreso, completada), prioridad, fecha límite e ID del proyecto.
+
+Un proyecto puede tener muchas tareas, pero una tarea solo puede pertenecer a un proyecto (1:N).
+
+**Requerimientos funcionales:**
+- CRUD de proyectos y tareas.
+- Consultar las tareas de un proyecto.
+- Filtrar tareas por estado y prioridad.
+- Consultar tareas vencidas que no estén completadas.
+- Cambiar el estado de una tarea.
+- Calcular el porcentaje de avance de un proyecto según sus tareas completadas.
+- Impedir la eliminación de proyectos con tareas pendientes.
+- Implementar validaciones y manejo de excepciones.
+
+**Requerimientos técnicos:**
+- Persistencia en una base de datos relacional.
+- Documentación con Swagger.
+- Repositorio en GitHub.
+- Despliegue de la API y la base de datos en Azure.
+- Implementación de CI/CD mediante GitHub Actions, automatizando la compilación, ejecución de pruebas y despliegue.
+
+**Entregables:** repositorio de GitHub, URL de la API desplegada y evidencia del funcionamiento del pipeline de CI/CD.

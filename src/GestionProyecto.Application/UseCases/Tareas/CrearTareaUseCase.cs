@@ -1,4 +1,5 @@
 using GestionProyecto.Application.DTOs.Tareas;
+using GestionProyecto.Application.Exceptions;
 using GestionProyecto.Application.Interfaces;
 using GestionProyecto.Application.Interfaces.Repositories;
 using GestionProyecto.Domain.Entities;
@@ -31,7 +32,7 @@ public class CrearTareaUseCase
 
         if (proyecto is null)
         {
-            throw new InvalidOperationException(
+            throw new NotFoundException(
                 "No se puede crear la tarea porque el proyecto no existe.");
         }
 
