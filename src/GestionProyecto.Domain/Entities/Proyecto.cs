@@ -30,8 +30,8 @@ public class Proyecto : BaseEntity
 
         Nombre = nombre.Trim();
         Descripcion = descripcion.Trim();
-        FechaInicio = fechaInicio;
-        FechaFinalizacion = fechaFinalizacion;
+        FechaInicio = NormalizarUtc(fechaInicio);
+        FechaFinalizacion = NormalizarUtc(fechaFinalizacion);
     }
 
     // Actualizar información del proyecto.
@@ -45,8 +45,8 @@ public class Proyecto : BaseEntity
 
         Nombre = nombre.Trim();
         Descripcion = descripcion.Trim();
-        FechaInicio = fechaInicio;
-        FechaFinalizacion = fechaFinalizacion;
+        FechaInicio = NormalizarUtc(fechaInicio);
+        FechaFinalizacion = NormalizarUtc(fechaFinalizacion);
     }
 
     // Agregar una tarea al proyecto.
@@ -91,11 +91,11 @@ public class Proyecto : BaseEntity
             2);
     }
 
-    // Comprobar si existen tareas pendientes.
+    // Comprobar si existen tareas pendientes (no completadas).
     public bool TieneTareasPendientes()
     {
         return _tareas.Any(
-            t => t.Estado == Enums.EstadoTarea.Pendiente);
+            t => t.Estado != Enums.EstadoTarea.Completada);
     }
 
     // Validaciones del proyecto.
@@ -113,8 +113,18 @@ public class Proyecto : BaseEntity
             throw new ArgumentException(
                 "La descripción del proyecto es obligatoria.");
 
-        if (fechaFinalizacion <= fechaInicio)
+        if (NormalizarUtc(fechaFinalizacion) <= NormalizarUtc(fechaInicio))
             throw new ArgumentException(
                 "La fecha de finalización debe ser posterior a la fecha de inicio.");
+    }
+
+    private static DateTime NormalizarUtc(DateTime fecha)
+    {
+        return fecha.Kind switch
+        {
+            DateTimeKind.Utc => fecha,
+            DateTimeKind.Local => fecha.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(fecha, DateTimeKind.Utc)
+        };
     }
 }

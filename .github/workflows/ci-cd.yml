@@ -1,0 +1,73 @@
+name: CI/CD - GestionProyecto API
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Compilar y Ejecutar Pruebas
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore GestionProyecto.slnx
+
+      - name: Compilar solución (Release)
+        run: dotnet build GestionProyecto.slnx --no-restore --configuration Release
+
+      - name: Ejecutar pruebas unitarias e integrales
+        run: dotnet test GestionProyecto.slnx --no-build --configuration Release --verbosity normal
+
+      - name: Publicar API
+        run: dotnet publish src/GestionProyecto.Api/GestionProyecto.Api.csproj --no-build --configuration Release --output ./publish
+
+      - name: Subir artefacto de despliegue
+        uses: actions/upload-artifact@v4
+        with:
+          name: gestion-proyecto-api
+          path: ./publish
+
+  deploy:
+    name: Desplegar en Azure App Service
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar artefacto de la API
+        uses: actions/download-artifact@v4
+        with:
+          name: gestion-proyecto-api
+          path: ./publish
+
+      - name: Verificar secretos de Azure
+        id: check_azure
+        env:
+          AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+          AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        run: |
+          if [ -n "$AZURE_WEBAPP_NAME" ] && [ -n "$AZURE_PUBLISH_PROFILE" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Secrets AZURE_WEBAPP_NAME o AZURE_WEBAPP_PUBLISH_PROFILE no configurados. Se omite el despliegue automático."
+          fi
+
+      - name: Desplegar en Azure Web App
+        if: steps.check_azure.outputs.enabled == 'true'
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish

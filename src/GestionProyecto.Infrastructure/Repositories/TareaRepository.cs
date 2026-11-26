@@ -53,12 +53,30 @@ public class TareaRepository : ITareaRepository
             .ToListAsync();
     }
 
+    // Filtrar tareas por estado y/o prioridad.
+    public async Task<IReadOnlyList<Tarea>> ObtenerPorFiltroAsync(
+        EstadoTarea? estado,
+        PrioridadTarea? prioridad)
+    {
+        var query = _context.Tareas.AsQueryable();
+
+        if (estado.HasValue)
+            query = query.Where(t => t.Estado == estado.Value);
+
+        if (prioridad.HasValue)
+            query = query.Where(t => t.Prioridad == prioridad.Value);
+
+        return await query.ToListAsync();
+    }
+
     // Obtener tareas vencidas que no estén completadas.
     public async Task<IReadOnlyList<Tarea>> ObtenerVencidasAsync()
     {
+        var ahoraUtc = DateTime.UtcNow;
+
         return await _context.Tareas
             .Where(t =>
-                t.FechaLimite < DateTime.Now &&
+                t.FechaLimite < ahoraUtc &&
                 t.Estado != EstadoTarea.Completada)
             .ToListAsync();
     }

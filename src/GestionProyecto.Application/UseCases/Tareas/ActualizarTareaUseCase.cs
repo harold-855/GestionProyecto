@@ -22,6 +22,8 @@ public class ActualizarTareaUseCase
         ActualizarTareaDto dto,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         // 1. Buscar la tarea.
         var tarea = await _tareaRepository.ObtenerPorIdAsync(id);
 

@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<CrearProyectoUseCase>();
         services.AddScoped<ObtenerProyectosUseCase>();
         services.AddScoped<ObtenerProyectoPorIdUseCase>();
+        services.AddScoped<ObtenerAvanceProyectoUseCase>();
         services.AddScoped<ActualizarProyectoUseCase>();
         services.AddScoped<EliminarProyectoUseCase>();
 
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ActualizarTareaUseCase>();
         services.AddScoped<CambiarEstadoTareaUseCase>();
         services.AddScoped<ObtenerTareasPorProyectoUseCase>();
+        services.AddScoped<FiltrarTareasUseCase>();
         services.AddScoped<FiltrarTareasPorEstadoUseCase>();
         services.AddScoped<FiltrarTareasPorPrioridadUseCase>();
         services.AddScoped<ObtenerTareasVencidasUseCase>();

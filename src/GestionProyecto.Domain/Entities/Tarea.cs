@@ -33,12 +33,12 @@ public class Tarea : BaseEntity
         DateTime fechaLimite,
         Guid proyectoId)
     {
-        ValidarDatos(titulo, descripcion, prioridad, proyectoId);
+        ValidarDatos(titulo, descripcion, prioridad, fechaLimite, proyectoId);
 
         Titulo = titulo.Trim();
         Descripcion = descripcion.Trim();
         Prioridad = prioridad;
-        FechaLimite = fechaLimite;
+        FechaLimite = NormalizarUtc(fechaLimite);
         ProyectoId = proyectoId;
 
         Estado = EstadoTarea.Pendiente;
@@ -51,12 +51,12 @@ public class Tarea : BaseEntity
         PrioridadTarea prioridad,
         DateTime fechaLimite)
     {
-        ValidarDatos(titulo, descripcion, prioridad, ProyectoId);
+        ValidarDatos(titulo, descripcion, prioridad, fechaLimite, ProyectoId);
 
         Titulo = titulo.Trim();
         Descripcion = descripcion.Trim();
         Prioridad = prioridad;
-        FechaLimite = fechaLimite;
+        FechaLimite = NormalizarUtc(fechaLimite);
     }
 
     // Cambiar estado de la tarea.
@@ -71,7 +71,7 @@ public class Tarea : BaseEntity
     // Comprobar si la tarea está vencida.
     public bool EstaVencida()
     {
-        return FechaLimite < DateTime.Now &&
+        return NormalizarUtc(FechaLimite) < DateTime.UtcNow &&
                Estado != EstadoTarea.Completada;
     }
 
@@ -80,6 +80,7 @@ public class Tarea : BaseEntity
         string titulo,
         string descripcion,
         PrioridadTarea prioridad,
+        DateTime fechaLimite,
         Guid proyectoId)
     {
         if (string.IsNullOrWhiteSpace(titulo))
@@ -94,8 +95,22 @@ public class Tarea : BaseEntity
             throw new ArgumentException(
                 "La prioridad indicada no es válida.");
 
+        if (fechaLimite == default)
+            throw new ArgumentException(
+                "La fecha límite de la tarea es obligatoria.");
+
         if (proyectoId == Guid.Empty)
             throw new ArgumentException(
                 "La tarea debe pertenecer a un proyecto.");
+    }
+
+    private static DateTime NormalizarUtc(DateTime fecha)
+    {
+        return fecha.Kind switch
+        {
+            DateTimeKind.Utc => fecha,
+            DateTimeKind.Local => fecha.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(fecha, DateTimeKind.Utc)
+        };
     }
 }

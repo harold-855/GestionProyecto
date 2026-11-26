@@ -1,6 +1,28 @@
-@GestionProyecto.Api_HostAddress = http://localhost:5157
+@GestionProyecto_Api_HostAddress = http://localhost:5157
 
-GET {{GestionProyecto.Api_HostAddress}}/weatherforecast/
+### Health check
+GET {{GestionProyecto_Api_HostAddress}}/health
 Accept: application/json
 
-###
+### Listar proyectos
+GET {{GestionProyecto_Api_HostAddress}}/api/proyectos
+Accept: application/json
+
+### Crear proyecto
+POST {{GestionProyecto_Api_HostAddress}}/api/proyectos
+Content-Type: application/json
+
+{
+  "nombre": "Sistema de Gestión",
+  "descripcion": "API REST para proyectos y tareas",
+  "fechaInicio": "2026-11-25T00:00:00Z",
+  "fechaFinalizacion": "2026-12-31T00:00:00Z"
+}
+
+### Listar tareas (con filtros opcionales ?estado=Pendiente&prioridad=Alta)
+GET {{GestionProyecto_Api_HostAddress}}/api/tareas?estado=Pendiente&prioridad=Alta
+Accept: application/json
+
+### Tareas vencidas no completadas
+GET {{GestionProyecto_Api_HostAddress}}/api/tareas/vencidas
+Accept: application/json

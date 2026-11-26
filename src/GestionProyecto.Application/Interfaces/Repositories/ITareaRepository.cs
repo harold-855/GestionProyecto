@@ -20,6 +20,11 @@ public interface ITareaRepository
     // Filtrar tareas por prioridad.
     Task<IReadOnlyList<Tarea>> ObtenerPorPrioridadAsync(PrioridadTarea prioridad);
 
+    // Filtrar tareas por estado y/o prioridad.
+    Task<IReadOnlyList<Tarea>> ObtenerPorFiltroAsync(
+        EstadoTarea? estado,
+        PrioridadTarea? prioridad);
+
     // Obtener tareas vencidas que no estén completadas.
     Task<IReadOnlyList<Tarea>> ObtenerVencidasAsync();
 

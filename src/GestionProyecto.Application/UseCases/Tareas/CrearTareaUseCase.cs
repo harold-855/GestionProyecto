@@ -2,6 +2,7 @@ using GestionProyecto.Application.DTOs.Tareas;
 using GestionProyecto.Application.Exceptions;
 using GestionProyecto.Application.Interfaces;
 using GestionProyecto.Application.Interfaces.Repositories;
+using GestionProyecto.Application.Mappings;
 using GestionProyecto.Domain.Entities;
 
 namespace GestionProyecto.Application.UseCases.Tareas;
@@ -26,7 +27,8 @@ public class CrearTareaUseCase
         CrearTareaDto dto,
         CancellationToken cancellationToken = default)
     {
-        // 1. Comprobar que el proyecto existe.
+        ArgumentNullException.ThrowIfNull(dto);
+
         var proyecto = await _proyectoRepository
             .ObtenerPorIdAsync(dto.ProyectoId);
 
@@ -36,7 +38,6 @@ public class CrearTareaUseCase
                 "No se puede crear la tarea porque el proyecto no existe.");
         }
 
-        // 2. Crear la entidad Tarea.
         var tarea = new Tarea(
             dto.Titulo,
             dto.Descripcion,
@@ -44,25 +45,9 @@ public class CrearTareaUseCase
             dto.FechaLimite,
             dto.ProyectoId);
 
-        // 3. Agregar la tarea al repositorio.
         await _tareaRepository.AgregarAsync(tarea);
-
-        // 4. Guardar los cambios.
         await _unitOfWork.GuardarCambiosAsync(cancellationToken);
 
-        // 5. Construir el DTO de respuesta.
-        var respuesta = new TareaDto
-        {
-            Id = tarea.Id,
-            Titulo = tarea.Titulo,
-            Descripcion = tarea.Descripcion,
-            Estado = tarea.Estado,
-            Prioridad = tarea.Prioridad,
-            FechaLimite = tarea.FechaLimite,
-            ProyectoId = tarea.ProyectoId,
-            EstaVencida = tarea.EstaVencida()
-        };
-
-        return respuesta;
+        return tarea.ToDto();
     }
 }

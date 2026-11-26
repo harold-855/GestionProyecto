@@ -1,6 +1,7 @@
 using GestionProyecto.Application.DTOs.Tareas;
 using GestionProyecto.Application.Exceptions;
 using GestionProyecto.Application.Interfaces.Repositories;
+using GestionProyecto.Application.Mappings;
 
 namespace GestionProyecto.Application.UseCases.Tareas;
 
@@ -27,18 +28,6 @@ public class ObtenerTareasPorProyectoUseCase
 
         var tareas = await _tareaRepository.ObtenerPorProyectoAsync(proyectoId);
 
-        var respuesta = tareas.Select(tarea => new TareaDto
-        {
-            Id = tarea.Id,
-            Titulo = tarea.Titulo,
-            Descripcion = tarea.Descripcion,
-            Estado = tarea.Estado,
-            Prioridad = tarea.Prioridad,
-            FechaLimite = tarea.FechaLimite,
-            ProyectoId = tarea.ProyectoId,
-            EstaVencida = tarea.EstaVencida()
-        }).ToList();
-
-        return respuesta;
+        return tareas.Select(t => t.ToDto()).ToList();
     }
 }

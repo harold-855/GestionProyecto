@@ -22,6 +22,8 @@ public class ActualizarProyectoUseCase
         ActualizarProyectoDto dto,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         // 1. Buscar el proyecto.
         var proyecto = await _proyectoRepository.ObtenerPorIdAsync(id);
 
