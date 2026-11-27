@@ -6,20 +6,21 @@ API RESTful desarrollada con **.NET 10**, **Clean Architecture**, **Entity Frame
 
 ## Tabla de Contenido
 
-- [Características Principales](#-características-principales)
-- [Arquitectura y Estructura](#-arquitectura-y-estructura)
-- [Modelo de Dominio y Reglas de Negocio](#-modelo-de-dominio-y-reglas-de-negocio)
-- [Endpoints de la API](#-endpoints-de-la-api)
-- [Manejo Global de Excepciones](#-manejo-global-de-excepciones)
-- [Pruebas Automatizadas](#-pruebas-automatizadas)
-- [Ejecución Local](#-ejecución-local)
-- [CI/CD y Despliegue en Azure](#-cicd-y-despliegue-en-azure)
+- [Características Principales](#características-principales)
+- [Arquitectura y Estructura](#arquitectura-y-estructura)
+- [Modelo de Dominio y Reglas de Negocio](#modelo-de-dominio-y-reglas-de-negocio)
+- [Endpoints de la API](#endpoints-de-la-api)
+- [Manejo Global de Excepciones](#manejo-global-de-excepciones)
+- [Pruebas Automatizadas](#pruebas-automatizadas)
+- [Ejecución Local](#ejecución-local)
+- [CI/CD y Despliegue en Azure](#cicd-y-despliegue-en-azure)
 
 ---
 
 ## Características Principales
 
-- **CRUD completo** de Proyectos y Tareas con relación **1:N** y rutas versionadas (`/api/v1/...`) en minúsculas.
+- **CRUD completo** de Proyectos y Tareas con relación **1:N** y rutas versionadas (`/api/v1/...`) en minúsculas mediante [`LowercaseParameterTransformer`](src/GestionProyecto.Api/Routing/LowercaseParameterTransformer.cs).
+- **Serialización legible de enums** (`EstadoTarea` y `PrioridadTarea`) como texto en JSON (`JsonStringEnumConverter`).
 - **Consulta de tareas por proyecto** (`GET /api/v1/proyectos/{id}/tareas`).
 - **Filtrado flexible de tareas** por estado, prioridad o ambos criterios combinados (`?estado=...&prioridad=...`).
 - **Detección de tareas vencidas** no completadas (`GET /api/v1/tareas/vencidas`).
@@ -43,12 +44,12 @@ GestionProyecto/
 │   ├── GestionProyecto.Domain/            # Entidades, enums y reglas de negocio puras
 │   ├── GestionProyecto.Application/       # DTOs, interfaces, mapeos y casos de uso
 │   ├── GestionProyecto.Infrastructure/    # DbContext EF Core (PostgreSQL), migraciones y repositorios
-│   └── GestionProyecto.Api/               # Controladores REST, middleware global y Program.cs
+│   └── GestionProyecto.Api/               # Controladores, extensiones, ruteo, middleware y Program.cs
 └── tests/
     ├── GestionProyecto.Domain.UnitTests/              # Pruebas unitarias de entidades y reglas de dominio
-    ├── GestionProyecto.Application.UnitTests/         # Pruebas unitarias de casos de uso (xUnit + Moq)
-    ├── GestionProyecto.Infrastructure.IntegrationTests/ # Pruebas de DbContext, configuraciones y repositorios
-    ├── GestionProyecto.Api.IntegrationTests/          # Pruebas end-to-end HTTP sobre Kestrel + EF InMemory
+    ├── GestionProyecto.Application.UnitTests/         # Pruebas unitarias de casos de uso y DTOs (xUnit + Moq)
+    ├── GestionProyecto.Infrastructure.IntegrationTests/ # Pruebas de DI, DbContext, configuraciones y repositorios
+    ├── GestionProyecto.Api.IntegrationTests/          # Pruebas end-to-end HTTP sobre Kestrel + EF InMemory y middleware
     └── GestionProyecto.ArchitectureTests/             # Pruebas de dependencias de capas y convenciones
 ```
 
@@ -57,9 +58,9 @@ GestionProyecto/
 | Capa | Responsabilidad | Componentes clave |
 | :--- | :--- | :--- |
 | **Domain** | Lógica de negocio e invariantes | `Proyecto`, `Tarea`, `EstadoTarea`, `PrioridadTarea`, `BaseEntity` |
-| **Application** | Orquestación de casos de uso y contratos | `UseCases/Proyectos/*`, `UseCases/Tareas/*`, `DTOs/*`, `Exceptions/*`, `MappingExtensions` |
-| **Infrastructure** | Persistencia relacional | `GestionProyectoDbContext`, `ProyectoConfiguration`, `TareaConfiguration`, `ProyectoRepository`, `TareaRepository`, `UnitOfWork` |
-| **Api** | Exposición HTTP y configuración | `ProyectosController`, `TareasController`, `ApiControllerBase`, `ExceptionHandlingMiddleware`, Swagger |
+| **Application** | Orquestación de casos de uso y contratos | `UseCases/Proyectos/*`, `UseCases/Tareas/*`, `DTOs/*`, `Interfaces/*`, `Exceptions/*`, `MappingExtensions`, `DependencyInjection` |
+| **Infrastructure** | Persistencia relacional | `GestionProyectoDbContext`, `ProyectoConfiguration`, `TareaConfiguration`, `Migrations/*`, `ProyectoRepository`, `TareaRepository`, `UnitOfWork`, `DependencyInjection` |
+| **Api** | Exposición HTTP y configuración | `ProyectosController`, `TareasController`, `ApiControllerBase`, `ApiServiceCollectionExtensions`, `LowercaseParameterTransformer`, `ExceptionHandlingMiddleware`, `Program.cs`, Swagger |
 
 ---
 
@@ -133,23 +134,29 @@ El middleware [`ExceptionHandlingMiddleware`](src/GestionProyecto.Api/Middleware
 
 ## Pruebas Automatizadas
 
-La solución organiza las pruebas en **5 proyectos especializados** bajo `tests/`:
+La solución cuenta con **79 pruebas automatizadas** organizadas en **5 proyectos especializados** bajo `tests/`:
 
-- **`GestionProyecto.Domain.UnitTests`**:
+- **`GestionProyecto.Domain.UnitTests`** (**23 pruebas**):
   - `Entities/ProyectoTests.cs`: Validaciones, normalización UTC, gestión de colección de tareas, cálculo de avance y verificación de tareas pendientes.
   - `Entities/TareaTests.cs`: Validaciones, cambios de estado, actualización y lógica de vencimiento.
-- **`GestionProyecto.Application.UnitTests`** (`xUnit` + `Moq`):
+- **`GestionProyecto.Application.UnitTests`** (**26 pruebas**, `xUnit` + `Moq`):
   - `UseCases/Proyectos/ProyectoUseCasesTests.cs`: Casos de uso de proyectos con repositorios mockeados.
   - `UseCases/Tareas/TareaCrudUseCasesTests.cs`: Casos de uso de creación, actualización, cambio de estado y eliminación de tareas.
   - `UseCases/Tareas/TareaConsultasUseCasesTests.cs`: Casos de uso de consulta, filtrado y tareas vencidas.
-- **`GestionProyecto.Infrastructure.IntegrationTests`** (`xUnit` + `EF Core InMemory`):
+  - `DTOs/DtoValidationTests.cs`: Validación de `DataAnnotations` en DTOs de creación de proyectos y tareas.
+- **`GestionProyecto.Infrastructure.IntegrationTests`** (**9 pruebas**, `xUnit` + `EF Core InMemory`):
+  - `Extensions/DependencyInjectionTests.cs`: Registro de `DbContext`, repositorios y `UnitOfWork`, además de validación de `DefaultConnection`.
+  - `Fixtures/DbContextTestFactory.cs`: Fábrica de contexto en memoria para pruebas de persistencia.
   - `Persistence/ModelConfigurationTests.cs`: Verificación de configuraciones Fluent API (`ProyectoConfiguration`, `TareaConfiguration`).
   - `Repositories/ProyectoRepositoryTests.cs`, `Repositories/TareaRepositoryTests.cs`, `Repositories/UnitOfWorkTests.cs`: Persistencia, filtros y `SaveChangesAsync`.
-- **`GestionProyecto.Api.IntegrationTests`** (`xUnit` + Kestrel real + `EF Core InMemory`):
-  - `Endpoints/SwaggerAndHealthTests.cs`: Verificación de `/health`, Swagger y rutas `/api/v1/...` en minúsculas.
-  - `Endpoints/ProyectosEndpointsTests.cs` y `Endpoints/TareasEndpointsTests.cs`: Flujos end-to-end CRUD, avance y filtros.
-  - `Middleware/ErrorHandlingTests.cs`: Validaciones y respuestas `ProblemDetails` RFC 7807.
-- **`GestionProyecto.ArchitectureTests`**:
+- **`GestionProyecto.Api.IntegrationTests`** (**9 pruebas**, `xUnit` + Kestrel real + `EF Core InMemory`):
+  - `Fixtures/ApiTestFactory.cs`: Host Kestrel en puerto efímero con `EF Core InMemory` para pruebas end-to-end.
+  - `Endpoints/SwaggerAndHealthTests.cs`: Verificación de `/health`, `/swagger/v1/swagger.json` y rutas `/api/v1/...` en minúsculas.
+  - `Endpoints/ProyectosEndpointsTests.cs` y `Endpoints/TareasEndpointsTests.cs`: Flujos end-to-end CRUD, avance, filtros y conflicto `409`.
+  - `Middleware/ErrorHandlingTests.cs`: Validaciones y respuestas `ProblemDetails` RFC 7807 en endpoints.
+  - `Middleware/ExceptionHandlingMiddlewareTests.cs`: Respuestas `500` de `ExceptionHandlingMiddleware` diferenciando entornos `Development` y `Production`.
+- **`GestionProyecto.ArchitectureTests`** (**12 pruebas**):
+  - `Helpers/ArchitectureAssemblies.cs`: Utilidades de inspección de ensamblados y referencias.
   - `Layers/LayerDependencyTests.cs`: Reglas de dependencia entre Domain, Application, Infrastructure y Api.
   - `Conventions/DomainAndApplicationConventionsTests.cs` y `Conventions/ApiConventionsTests.cs`: Convenciones de entidades, casos de uso, repositorios, controladores y rutas versionadas en minúsculas.
 
@@ -184,15 +191,15 @@ dotnet test GestionProyecto.slnx --configuration Release --verbosity normal
    dotnet build GestionProyecto.slnx
    dotnet run --project src/GestionProyecto.Api
    ```
-4. **Explorar la documentación Swagger** en `http://localhost:5157/swagger` (o usar el archivo de pruebas HTTP `src/GestionProyecto.Api/GestionProyecto.Api.http`).
+4. **Explorar la documentación Swagger** en `http://localhost:5157/swagger` (o `https://localhost:7293/swagger` con el perfil `https`, o usar el archivo de pruebas HTTP `src/GestionProyecto.Api/GestionProyecto.Api.http`).
 
 ---
 
 ## CI/CD y Despliegue en Azure
 
-El pipeline definido en [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) se ejecuta automáticamente en cada `push` y `pull_request` hacia `main`:
+El pipeline definido en [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) se ejecuta automáticamente en cada `push` y `pull_request` hacia `main` (y manualmente mediante `workflow_dispatch`):
 
-1. **Job `build-and-test`:** Restaura dependencias, compila en configuración `Release`, ejecuta toda la suite de pruebas y publica el artefacto de la API.
+1. **Job `build-and-test`:** Restaura dependencias de `GestionProyecto.slnx`, compila en configuración `Release`, ejecuta las **79 pruebas** de los 5 proyectos (unitarias, integración y arquitectura) y publica el artefacto de la API (`gestion-proyecto-api`).
 2. **Job `deploy`:** En eventos `push` sobre `main`, descarga el artefacto publicado y despliega en **Azure App Service** mediante `azure/webapps-deploy@v3` cuando los secretos están configurados.
 
 ### Configuración requerida en GitHub y Azure
