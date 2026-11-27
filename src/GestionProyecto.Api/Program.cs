@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+using GestionProyecto.Api.Extensions;
 using GestionProyecto.Api.Middleware;
 using GestionProyecto.Application.Extensions;
 using GestionProyecto.Infrastructure.Extensions;
@@ -7,16 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Registrar servicios de la API y serialización legible de enums.
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
-
-// Registrar Swagger.
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// Registrar servicios de la API, rutas versionadas en minúsculas y Swagger.
+builder.Services.AddApiPresentation();
 
 // Registrar Application.
 builder.Services.AddApplication();

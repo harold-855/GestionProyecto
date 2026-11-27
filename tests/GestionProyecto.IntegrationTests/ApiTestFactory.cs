@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using GestionProyecto.Api.Controllers;
+using GestionProyecto.Api.Extensions;
 using GestionProyecto.Api.Middleware;
 using GestionProyecto.Application.Extensions;
 using GestionProyecto.Application.Interfaces;
@@ -42,15 +42,7 @@ public sealed class ApiTestFactory : IAsyncLifetime
 
         builder.WebHost.UseUrls("http://127.0.0.1:0");
 
-        builder.Services.AddControllers()
-            .AddApplicationPart(typeof(ProyectosController).Assembly)
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            });
-
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen();
+        builder.Services.AddApiPresentation();
 
         builder.Services.AddApplication();
 

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestionProyecto.Api.Controllers;
 
-[Route("api/[controller]")]
 public class ProyectosController : ApiControllerBase
 {
     private readonly CrearProyectoUseCase _crearProyecto;

@@ -19,11 +19,11 @@ API RESTful desarrollada con **.NET 10**, **Clean Architecture**, **Entity Frame
 
 ## Características Principales
 
-- **CRUD completo** de Proyectos y Tareas con relación **1:N**.
-- **Consulta de tareas por proyecto** (`GET /api/proyectos/{id}/tareas`).
+- **CRUD completo** de Proyectos y Tareas con relación **1:N** y rutas versionadas (`/api/v1/...`) en minúsculas.
+- **Consulta de tareas por proyecto** (`GET /api/v1/proyectos/{id}/tareas`).
 - **Filtrado flexible de tareas** por estado, prioridad o ambos criterios combinados (`?estado=...&prioridad=...`).
-- **Detección de tareas vencidas** no completadas (`GET /api/tareas/vencidas`).
-- **Cambio de estado dedicado** mediante `PATCH /api/tareas/{id}/estado`.
+- **Detección de tareas vencidas** no completadas (`GET /api/v1/tareas/vencidas`).
+- **Cambio de estado dedicado** mediante `PATCH /api/v1/tareas/{id}/estado`.
 - **Cálculo automático de avance del proyecto** basado en tareas completadas (`PorcentajeAvance`, `TotalTareas`, `TareasCompletadas`).
 - **Protección de integridad:** impide eliminar proyectos que tengan tareas pendientes o en progreso (`409 Conflict`).
 - **Validaciones y errores estandarizados** (`DataAnnotations` + reglas de dominio + middleware global con `ProblemDetails` RFC 7807).
@@ -79,31 +79,31 @@ GestionProyecto/
 
 ## Endpoints de la API
 
-### Proyectos (`/api/proyectos`)
+### Proyectos (`/api/v1/proyectos`)
 
 | Método | Ruta | Descripción | Respuestas |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/proyectos` | Lista todos los proyectos con su avance | `200 OK` |
-| `GET` | `/api/proyectos/{id}` | Obtiene un proyecto por su ID | `200 OK`, `404 Not Found` |
-| `GET` | `/api/proyectos/{id}/avance` | Obtiene el resumen y porcentaje de avance | `200 OK`, `404 Not Found` |
-| `GET` | `/api/proyectos/{id}/tareas` | Lista las tareas pertenecientes al proyecto | `200 OK`, `404 Not Found` |
-| `POST` | `/api/proyectos` | Crea un nuevo proyecto | `201 Created`, `400 Bad Request` |
-| `PUT` | `/api/proyectos/{id}` | Actualiza un proyecto existente | `204 No Content`, `400 Bad Request`, `404 Not Found` |
-| `DELETE` | `/api/proyectos/{id}` | Elimina un proyecto sin tareas pendientes | `204 No Content`, `404 Not Found`, `409 Conflict` |
+| `GET` | `/api/v1/proyectos` | Lista todos los proyectos con su avance | `200 OK` |
+| `GET` | `/api/v1/proyectos/{id}` | Obtiene un proyecto por su ID | `200 OK`, `404 Not Found` |
+| `GET` | `/api/v1/proyectos/{id}/avance` | Obtiene el resumen y porcentaje de avance | `200 OK`, `404 Not Found` |
+| `GET` | `/api/v1/proyectos/{id}/tareas` | Lista las tareas pertenecientes al proyecto | `200 OK`, `404 Not Found` |
+| `POST` | `/api/v1/proyectos` | Crea un nuevo proyecto | `201 Created`, `400 Bad Request` |
+| `PUT` | `/api/v1/proyectos/{id}` | Actualiza un proyecto existente | `204 No Content`, `400 Bad Request`, `404 Not Found` |
+| `DELETE` | `/api/v1/proyectos/{id}` | Elimina un proyecto sin tareas pendientes | `204 No Content`, `404 Not Found`, `409 Conflict` |
 
-### Tareas (`/api/tareas`)
+### Tareas (`/api/v1/tareas`)
 
 | Método | Ruta | Descripción | Respuestas |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/tareas` | Lista tareas (filtros opcionales `?estado=&prioridad=`) | `200 OK`, `400 Bad Request` |
-| `GET` | `/api/tareas/{id}` | Obtiene una tarea por su ID | `200 OK`, `404 Not Found` |
-| `GET` | `/api/tareas/estado/{estado}` | Filtra tareas por estado | `200 OK`, `400 Bad Request` |
-| `GET` | `/api/tareas/prioridad/{prioridad}` | Filtra tareas por prioridad | `200 OK`, `400 Bad Request` |
-| `GET` | `/api/tareas/vencidas` | Consulta tareas vencidas no completadas | `200 OK` |
-| `POST` | `/api/tareas` | Crea una tarea asociada a un proyecto | `201 Created`, `400 Bad Request`, `404 Not Found` |
-| `PUT` | `/api/tareas/{id}` | Actualiza título, descripción, prioridad y fecha límite | `204 No Content`, `400 Bad Request`, `404 Not Found` |
-| `PATCH` | `/api/tareas/{id}/estado` | Cambia el estado de una tarea | `204 No Content`, `400 Bad Request`, `404 Not Found` |
-| `DELETE` | `/api/tareas/{id}` | Elimina una tarea | `204 No Content`, `404 Not Found` |
+| `GET` | `/api/v1/tareas` | Lista tareas (filtros opcionales `?estado=&prioridad=`) | `200 OK`, `400 Bad Request` |
+| `GET` | `/api/v1/tareas/{id}` | Obtiene una tarea por su ID | `200 OK`, `404 Not Found` |
+| `GET` | `/api/v1/tareas/estado/{estado}` | Filtra tareas por estado | `200 OK`, `400 Bad Request` |
+| `GET` | `/api/v1/tareas/prioridad/{prioridad}` | Filtra tareas por prioridad | `200 OK`, `400 Bad Request` |
+| `GET` | `/api/v1/tareas/vencidas` | Consulta tareas vencidas no completadas | `200 OK` |
+| `POST` | `/api/v1/tareas` | Crea una tarea asociada a un proyecto | `201 Created`, `400 Bad Request`, `404 Not Found` |
+| `PUT` | `/api/v1/tareas/{id}` | Actualiza título, descripción, prioridad y fecha límite | `204 No Content`, `400 Bad Request`, `404 Not Found` |
+| `PATCH` | `/api/v1/tareas/{id}/estado` | Cambia el estado de una tarea | `204 No Content`, `400 Bad Request`, `404 Not Found` |
+| `DELETE` | `/api/v1/tareas/{id}` | Elimina una tarea | `204 No Content`, `404 Not Found` |
 
 ### Documentación y Monitoreo
 

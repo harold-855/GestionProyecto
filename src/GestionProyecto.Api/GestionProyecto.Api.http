@@ -5,11 +5,11 @@ GET {{GestionProyecto_Api_HostAddress}}/health
 Accept: application/json
 
 ### Listar proyectos
-GET {{GestionProyecto_Api_HostAddress}}/api/proyectos
+GET {{GestionProyecto_Api_HostAddress}}/api/v1/proyectos
 Accept: application/json
 
 ### Crear proyecto
-POST {{GestionProyecto_Api_HostAddress}}/api/proyectos
+POST {{GestionProyecto_Api_HostAddress}}/api/v1/proyectos
 Content-Type: application/json
 
 {
@@ -20,9 +20,9 @@ Content-Type: application/json
 }
 
 ### Listar tareas (con filtros opcionales ?estado=Pendiente&prioridad=Alta)
-GET {{GestionProyecto_Api_HostAddress}}/api/tareas?estado=Pendiente&prioridad=Alta
+GET {{GestionProyecto_Api_HostAddress}}/api/v1/tareas?estado=Pendiente&prioridad=Alta
 Accept: application/json
 
 ### Tareas vencidas no completadas
-GET {{GestionProyecto_Api_HostAddress}}/api/tareas/vencidas
+GET {{GestionProyecto_Api_HostAddress}}/api/v1/tareas/vencidas
 Accept: application/json

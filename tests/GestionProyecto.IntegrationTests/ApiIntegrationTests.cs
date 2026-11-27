@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using GestionProyecto.Application.DTOs.Proyectos;
 using GestionProyecto.Application.DTOs.Tareas;
 using GestionProyecto.Domain.Enums;
@@ -21,6 +22,40 @@ public class ApiIntegrationTests
 
         Assert.Equal(HttpStatusCode.OK, healthResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, swaggerResponse.StatusCode);
+
+        using var swaggerJson = JsonDocument.Parse(await swaggerResponse.Content.ReadAsStringAsync());
+        var paths = swaggerJson.RootElement.GetProperty("paths")
+            .EnumerateObject()
+            .Select(p => p.Name)
+            .ToList();
+
+        Assert.NotEmpty(paths);
+        foreach (var path in paths)
+        {
+            Assert.Equal(path.ToLowerInvariant(), path);
+            if (path != "/health")
+            {
+                Assert.StartsWith("/api/v1/", path, StringComparison.Ordinal);
+            }
+        }
+
+        string[] expectedApiPaths =
+        [
+            "/api/v1/proyectos",
+            "/api/v1/proyectos/{id}",
+            "/api/v1/proyectos/{id}/avance",
+            "/api/v1/proyectos/{id}/tareas",
+            "/api/v1/tareas",
+            "/api/v1/tareas/{id}",
+            "/api/v1/tareas/estado/{estado}",
+            "/api/v1/tareas/prioridad/{prioridad}",
+            "/api/v1/tareas/vencidas"
+        ];
+
+        foreach (var expectedPath in expectedApiPaths)
+        {
+            Assert.Contains(expectedPath, paths);
+        }
     }
 
     [Fact]
@@ -38,15 +73,16 @@ public class ApiIntegrationTests
             FechaFinalizacion = DateTime.UtcNow.AddDays(30)
         };
 
-        var createResponse = await client.PostAsJsonAsync("/api/proyectos", crearDto, ApiTestFactory.JsonOptions);
+        var createResponse = await client.PostAsJsonAsync("/api/v1/proyectos", crearDto, ApiTestFactory.JsonOptions);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
         var proyecto = await createResponse.Content.ReadFromJsonAsync<ProyectoDto>(ApiTestFactory.JsonOptions);
         Assert.NotNull(proyecto);
         Assert.Equal(0m, proyecto.PorcentajeAvance);
+        Assert.Equal($"/api/v1/proyectos/{proyecto.Id}", createResponse.Headers.Location?.AbsolutePath);
 
         // Crear dos tareas asociadas
-        var t1Resp = await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var t1Resp = await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Configurar BD",
             Descripcion = "PostgreSQL en Azure",
@@ -56,7 +92,7 @@ public class ApiIntegrationTests
         }, ApiTestFactory.JsonOptions);
         var t1 = await t1Resp.Content.ReadFromJsonAsync<TareaDto>(ApiTestFactory.JsonOptions);
 
-        var t2Resp = await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var t2Resp = await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Configurar CI/CD",
             Descripcion = "GitHub Actions",
@@ -68,16 +104,17 @@ public class ApiIntegrationTests
 
         Assert.NotNull(t1);
         Assert.NotNull(t2);
+        Assert.Equal($"/api/v1/tareas/{t1.Id}", t1Resp.Headers.Location?.AbsolutePath);
 
         // Completar una de las dos tareas => 50% de avance
         var patchResp = await client.PatchAsJsonAsync(
-            $"/api/tareas/{t1.Id}/estado",
+            $"/api/v1/tareas/{t1.Id}/estado",
             new CambiarEstadoTareaDto { Estado = EstadoTarea.Completada },
             ApiTestFactory.JsonOptions);
         Assert.Equal(HttpStatusCode.NoContent, patchResp.StatusCode);
 
         var avance = await client.GetFromJsonAsync<AvanceProyectoDto>(
-            $"/api/proyectos/{proyecto.Id}/avance",
+            $"/api/v1/proyectos/{proyecto.Id}/avance",
             ApiTestFactory.JsonOptions);
         Assert.NotNull(avance);
         Assert.Equal(2, avance.TotalTareas);
@@ -85,7 +122,7 @@ public class ApiIntegrationTests
         Assert.Equal(50m, avance.PorcentajeAvance);
 
         // Actualizar proyecto
-        var putResp = await client.PutAsJsonAsync($"/api/proyectos/{proyecto.Id}", new ActualizarProyectoDto
+        var putResp = await client.PutAsJsonAsync($"/api/v1/proyectos/{proyecto.Id}", new ActualizarProyectoDto
         {
             Nombre = "Migración Cloud v2",
             Descripcion = "Actualizada",
@@ -94,7 +131,7 @@ public class ApiIntegrationTests
         }, ApiTestFactory.JsonOptions);
         Assert.Equal(HttpStatusCode.NoContent, putResp.StatusCode);
 
-        var lista = await client.GetFromJsonAsync<List<ProyectoDto>>("/api/proyectos", ApiTestFactory.JsonOptions);
+        var lista = await client.GetFromJsonAsync<List<ProyectoDto>>("/api/v1/proyectos", ApiTestFactory.JsonOptions);
         Assert.NotNull(lista);
         Assert.Single(lista);
         Assert.Equal("Migración Cloud v2", lista[0].Nombre);
@@ -108,7 +145,7 @@ public class ApiIntegrationTests
         await factory.InitializeAsync();
         var client = factory.Client;
 
-        var pResp = await client.PostAsJsonAsync("/api/proyectos", new CrearProyectoDto
+        var pResp = await client.PostAsJsonAsync("/api/v1/proyectos", new CrearProyectoDto
         {
             Nombre = "Proyecto Protegido",
             Descripcion = "No eliminar con tareas pendientes",
@@ -118,7 +155,7 @@ public class ApiIntegrationTests
         var proyecto = await pResp.Content.ReadFromJsonAsync<ProyectoDto>(ApiTestFactory.JsonOptions);
         Assert.NotNull(proyecto);
 
-        var tResp = await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var tResp = await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Tarea pendiente",
             Descripcion = "Bloquea borrado",
@@ -130,7 +167,7 @@ public class ApiIntegrationTests
         Assert.NotNull(tarea);
 
         // Intentar eliminar con tarea pendiente -> 409 Conflict
-        var deleteConflict = await client.DeleteAsync($"/api/proyectos/{proyecto.Id}");
+        var deleteConflict = await client.DeleteAsync($"/api/v1/proyectos/{proyecto.Id}");
         Assert.Equal(HttpStatusCode.Conflict, deleteConflict.StatusCode);
 
         var problem = await deleteConflict.Content.ReadFromJsonAsync<ProblemDetails>(ApiTestFactory.JsonOptions);
@@ -139,14 +176,14 @@ public class ApiIntegrationTests
 
         // Completar tarea y volver a eliminar -> 204 NoContent
         await client.PatchAsJsonAsync(
-            $"/api/tareas/{tarea.Id}/estado",
+            $"/api/v1/tareas/{tarea.Id}/estado",
             new CambiarEstadoTareaDto { Estado = EstadoTarea.Completada },
             ApiTestFactory.JsonOptions);
 
-        var deleteOk = await client.DeleteAsync($"/api/proyectos/{proyecto.Id}");
+        var deleteOk = await client.DeleteAsync($"/api/v1/proyectos/{proyecto.Id}");
         Assert.Equal(HttpStatusCode.NoContent, deleteOk.StatusCode);
 
-        var getAfterDelete = await client.GetAsync($"/api/proyectos/{proyecto.Id}");
+        var getAfterDelete = await client.GetAsync($"/api/v1/proyectos/{proyecto.Id}");
         Assert.Equal(HttpStatusCode.NotFound, getAfterDelete.StatusCode);
     }
 
@@ -157,7 +194,7 @@ public class ApiIntegrationTests
         await factory.InitializeAsync();
         var client = factory.Client;
 
-        var p1Resp = await client.PostAsJsonAsync("/api/proyectos", new CrearProyectoDto
+        var p1Resp = await client.PostAsJsonAsync("/api/v1/proyectos", new CrearProyectoDto
         {
             Nombre = "P1",
             Descripcion = "D1",
@@ -166,7 +203,7 @@ public class ApiIntegrationTests
         }, ApiTestFactory.JsonOptions);
         var p1 = await p1Resp.Content.ReadFromJsonAsync<ProyectoDto>(ApiTestFactory.JsonOptions);
 
-        var p2Resp = await client.PostAsJsonAsync("/api/proyectos", new CrearProyectoDto
+        var p2Resp = await client.PostAsJsonAsync("/api/v1/proyectos", new CrearProyectoDto
         {
             Nombre = "P2",
             Descripcion = "D2",
@@ -179,7 +216,7 @@ public class ApiIntegrationTests
         Assert.NotNull(p2);
 
         // Tarea 1: P1, Alta, Pendiente, Vencida
-        var t1 = await (await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var t1 = await (await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Urgente vencida",
             Descripcion = "D",
@@ -189,7 +226,7 @@ public class ApiIntegrationTests
         }, ApiTestFactory.JsonOptions)).Content.ReadFromJsonAsync<TareaDto>(ApiTestFactory.JsonOptions);
 
         // Tarea 2: P1, Media, EnProgreso, Futura
-        var t2 = await (await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var t2 = await (await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "En progreso",
             Descripcion = "D",
@@ -197,11 +234,11 @@ public class ApiIntegrationTests
             FechaLimite = DateTime.UtcNow.AddDays(5),
             ProyectoId = p1.Id
         }, ApiTestFactory.JsonOptions)).Content.ReadFromJsonAsync<TareaDto>(ApiTestFactory.JsonOptions);
-        await client.PatchAsJsonAsync($"/api/tareas/{t2!.Id}/estado",
+        await client.PatchAsJsonAsync($"/api/v1/tareas/{t2!.Id}/estado",
             new CambiarEstadoTareaDto { Estado = EstadoTarea.EnProgreso }, ApiTestFactory.JsonOptions);
 
         // Tarea 3: P2, Alta, Completada, Fecha pasada (NO debe salir en vencidas)
-        var t3 = await (await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var t3 = await (await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Ya completada",
             Descripcion = "D",
@@ -209,41 +246,41 @@ public class ApiIntegrationTests
             FechaLimite = DateTime.UtcNow.AddDays(-5),
             ProyectoId = p2.Id
         }, ApiTestFactory.JsonOptions)).Content.ReadFromJsonAsync<TareaDto>(ApiTestFactory.JsonOptions);
-        await client.PatchAsJsonAsync($"/api/tareas/{t3!.Id}/estado",
+        await client.PatchAsJsonAsync($"/api/v1/tareas/{t3!.Id}/estado",
             new CambiarEstadoTareaDto { Estado = EstadoTarea.Completada }, ApiTestFactory.JsonOptions);
 
         // Consultar tareas de P1
         var tareasP1 = await client.GetFromJsonAsync<List<TareaDto>>(
-            $"/api/proyectos/{p1.Id}/tareas", ApiTestFactory.JsonOptions);
+            $"/api/v1/proyectos/{p1.Id}/tareas", ApiTestFactory.JsonOptions);
         Assert.NotNull(tareasP1);
         Assert.Equal(2, tareasP1.Count);
 
         // Filtro combinado estado=Pendiente & prioridad=Alta
         var combinadas = await client.GetFromJsonAsync<List<TareaDto>>(
-            "/api/tareas?estado=Pendiente&prioridad=Alta", ApiTestFactory.JsonOptions);
+            "/api/v1/tareas?estado=Pendiente&prioridad=Alta", ApiTestFactory.JsonOptions);
         Assert.NotNull(combinadas);
         var unica = Assert.Single(combinadas);
         Assert.Equal(t1!.Id, unica.Id);
 
         // Filtro por estado y prioridad por separado
         var enProgreso = await client.GetFromJsonAsync<List<TareaDto>>(
-            "/api/tareas/estado/EnProgreso", ApiTestFactory.JsonOptions);
+            "/api/v1/tareas/estado/EnProgreso", ApiTestFactory.JsonOptions);
         Assert.Single(enProgreso!);
 
         var media = await client.GetFromJsonAsync<List<TareaDto>>(
-            "/api/tareas/prioridad/Media", ApiTestFactory.JsonOptions);
+            "/api/v1/tareas/prioridad/Media", ApiTestFactory.JsonOptions);
         Assert.Single(media!);
 
         // Consultar vencidas no completadas
         var vencidas = await client.GetFromJsonAsync<List<TareaDto>>(
-            "/api/tareas/vencidas", ApiTestFactory.JsonOptions);
+            "/api/v1/tareas/vencidas", ApiTestFactory.JsonOptions);
         Assert.NotNull(vencidas);
         var vencida = Assert.Single(vencidas);
         Assert.Equal(t1.Id, vencida.Id);
         Assert.True(vencida.EstaVencida);
 
         // Actualizar y eliminar una tarea
-        var putTarea = await client.PutAsJsonAsync($"/api/tareas/{t2.Id}", new ActualizarTareaDto
+        var putTarea = await client.PutAsJsonAsync($"/api/v1/tareas/{t2.Id}", new ActualizarTareaDto
         {
             Titulo = "En progreso editada",
             Descripcion = "Editada",
@@ -252,7 +289,7 @@ public class ApiIntegrationTests
         }, ApiTestFactory.JsonOptions);
         Assert.Equal(HttpStatusCode.NoContent, putTarea.StatusCode);
 
-        var delTarea = await client.DeleteAsync($"/api/tareas/{t2.Id}");
+        var delTarea = await client.DeleteAsync($"/api/v1/tareas/{t2.Id}");
         Assert.Equal(HttpStatusCode.NoContent, delTarea.StatusCode);
     }
 
@@ -264,7 +301,7 @@ public class ApiIntegrationTests
         var client = factory.Client;
 
         // Fecha finalización anterior a inicio -> 400 BadRequest
-        var badDatesResp = await client.PostAsJsonAsync("/api/proyectos", new CrearProyectoDto
+        var badDatesResp = await client.PostAsJsonAsync("/api/v1/proyectos", new CrearProyectoDto
         {
             Nombre = "Fechas mal",
             Descripcion = "Desc",
@@ -274,7 +311,7 @@ public class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, badDatesResp.StatusCode);
 
         // Campos requeridos vacíos -> 400 BadRequest
-        var badModelResp = await client.PostAsJsonAsync("/api/proyectos", new CrearProyectoDto
+        var badModelResp = await client.PostAsJsonAsync("/api/v1/proyectos", new CrearProyectoDto
         {
             Nombre = "",
             Descripcion = "",
@@ -284,7 +321,7 @@ public class ApiIntegrationTests
         Assert.Equal(HttpStatusCode.BadRequest, badModelResp.StatusCode);
 
         // Crear tarea para proyecto inexistente -> 404 NotFound
-        var missingProjectTaskResp = await client.PostAsJsonAsync("/api/tareas", new CrearTareaDto
+        var missingProjectTaskResp = await client.PostAsJsonAsync("/api/v1/tareas", new CrearTareaDto
         {
             Titulo = "Huérfana",
             Descripcion = "Desc",
@@ -296,8 +333,8 @@ public class ApiIntegrationTests
 
         // Consultar proyecto y tarea inexistentes -> 404 NotFound
         Assert.Equal(HttpStatusCode.NotFound,
-            (await client.GetAsync($"/api/proyectos/{Guid.NewGuid()}")).StatusCode);
+            (await client.GetAsync($"/api/v1/proyectos/{Guid.NewGuid()}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,
-            (await client.GetAsync($"/api/tareas/{Guid.NewGuid()}")).StatusCode);
+            (await client.GetAsync($"/api/v1/tareas/{Guid.NewGuid()}")).StatusCode);
     }
 }

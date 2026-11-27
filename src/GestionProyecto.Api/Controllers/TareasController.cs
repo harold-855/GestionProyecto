@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestionProyecto.Api.Controllers;
 
-[Route("api/[controller]")]
 public class TareasController : ApiControllerBase
 {
     private readonly CrearTareaUseCase _crearTarea;

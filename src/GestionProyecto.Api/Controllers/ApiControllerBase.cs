@@ -6,6 +6,7 @@ namespace GestionProyecto.Api.Controllers;
 /// Controlador base con respuestas estandarizadas ProblemDetails.
 /// </summary>
 [ApiController]
+[Route("api/v1/[controller]")]
 [Produces("application/json")]
 public abstract class ApiControllerBase : ControllerBase
 {
