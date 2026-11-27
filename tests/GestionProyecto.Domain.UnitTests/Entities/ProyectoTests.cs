@@ -1,8 +1,7 @@
 using GestionProyecto.Domain.Entities;
 using GestionProyecto.Domain.Enums;
-using Xunit;
 
-namespace GestionProyecto.UnitTests.Domain;
+namespace GestionProyecto.Domain.UnitTests.Entities;
 
 public class ProyectoTests
 {
@@ -62,6 +61,38 @@ public class ProyectoTests
         Assert.Equal("Nueva Desc", proyecto.Descripcion);
         Assert.Equal(nuevoInicio, proyecto.FechaInicio);
         Assert.Equal(nuevoFin, proyecto.FechaFinalizacion);
+    }
+
+    [Fact]
+    public void CrearProyecto_ConFechaLocal_NormalizaAUtc()
+    {
+        var inicioLocal = new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Local);
+        var finLocal = new DateTime(2026, 3, 10, 10, 0, 0, DateTimeKind.Local);
+
+        var proyecto = new Proyecto("Local", "Desc", inicioLocal, finLocal);
+
+        Assert.Equal(DateTimeKind.Utc, proyecto.FechaInicio.Kind);
+        Assert.Equal(DateTimeKind.Utc, proyecto.FechaFinalizacion.Kind);
+        Assert.Equal(inicioLocal.ToUniversalTime(), proyecto.FechaInicio);
+        Assert.Equal(finLocal.ToUniversalTime(), proyecto.FechaFinalizacion);
+    }
+
+    [Fact]
+    public void Actualizar_ConDatosInvalidos_LanzaArgumentException()
+    {
+        var proyecto = new Proyecto("Original", "Desc", InicioValido, FinValida);
+
+        Assert.Throws<ArgumentException>(() => proyecto.Actualizar("", "Desc", InicioValido, FinValida));
+        Assert.Throws<ArgumentException>(() => proyecto.Actualizar("Nombre", " ", InicioValido, FinValida));
+        Assert.Throws<ArgumentException>(() => proyecto.Actualizar("Nombre", "Desc", FinValida, InicioValido));
+    }
+
+    [Fact]
+    public void AgregarTarea_CuandoEsNull_LanzaArgumentNullException()
+    {
+        var proyecto = new Proyecto("Proyecto", "Desc", InicioValido, FinValida);
+
+        Assert.Throws<ArgumentNullException>(() => proyecto.AgregarTarea(null!));
     }
 
     [Fact]

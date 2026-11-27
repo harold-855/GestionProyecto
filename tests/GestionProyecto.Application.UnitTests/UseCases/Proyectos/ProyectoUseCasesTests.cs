@@ -6,9 +6,8 @@ using GestionProyecto.Application.UseCases.Proyectos;
 using GestionProyecto.Domain.Entities;
 using GestionProyecto.Domain.Enums;
 using Moq;
-using Xunit;
 
-namespace GestionProyecto.UnitTests.Application;
+namespace GestionProyecto.Application.UnitTests.UseCases.Proyectos;
 
 public class ProyectoUseCasesTests
 {
@@ -68,6 +67,30 @@ public class ProyectoUseCasesTests
 
         Assert.Null(await obtenerPorId.EjecutarAsync(Guid.NewGuid()));
         Assert.Null(await obtenerAvance.EjecutarAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task ObtenerProyectoPorId_Y_Avance_CuandoExiste_RetornanDtosCalculados()
+    {
+        var proyecto = new Proyecto("P1", "D1", DateTime.UtcNow, DateTime.UtcNow.AddDays(10));
+        var t1 = new Tarea("T1", "D1", PrioridadTarea.Alta, DateTime.UtcNow.AddDays(2), proyecto.Id);
+        t1.CambiarEstado(EstadoTarea.Completada);
+        proyecto.AgregarTarea(t1);
+
+        _proyectoRepoMock.Setup(r => r.ObtenerPorIdConTareasAsync(proyecto.Id)).ReturnsAsync(proyecto);
+
+        var obtenerPorId = new ObtenerProyectoPorIdUseCase(_proyectoRepoMock.Object);
+        var obtenerAvance = new ObtenerAvanceProyectoUseCase(_proyectoRepoMock.Object);
+
+        var proyectoDto = await obtenerPorId.EjecutarAsync(proyecto.Id);
+        var avanceDto = await obtenerAvance.EjecutarAsync(proyecto.Id);
+
+        Assert.NotNull(proyectoDto);
+        Assert.Equal(100m, proyectoDto.PorcentajeAvance);
+        Assert.NotNull(avanceDto);
+        Assert.Equal(1, avanceDto.TotalTareas);
+        Assert.Equal(1, avanceDto.TareasCompletadas);
+        Assert.Equal(100m, avanceDto.PorcentajeAvance);
     }
 
     [Fact]

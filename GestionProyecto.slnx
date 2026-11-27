@@ -3,7 +3,9 @@
   <Project Path="src/GestionProyecto.Application/GestionProyecto.Application.csproj" />
   <Project Path="src/GestionProyecto.Domain/GestionProyecto.Domain.csproj" />
   <Project Path="src/GestionProyecto.Infrastructure/GestionProyecto.Infrastructure.csproj" />
-  <Project Path="tests/GestionProyecto.UnitTests/GestionProyecto.UnitTests.csproj" />
   <Project Path="tests/GestionProyecto.Domain.UnitTests/GestionProyecto.Domain.UnitTests.csproj" />
-  <Project Path="tests/GestionProyecto.IntegrationTests/GestionProyecto.IntegrationTests.csproj" />
+  <Project Path="tests/GestionProyecto.Application.UnitTests/GestionProyecto.Application.UnitTests.csproj" />
+  <Project Path="tests/GestionProyecto.Infrastructure.IntegrationTests/GestionProyecto.Infrastructure.IntegrationTests.csproj" />
+  <Project Path="tests/GestionProyecto.Api.IntegrationTests/GestionProyecto.Api.IntegrationTests.csproj" />
+  <Project Path="tests/GestionProyecto.ArchitectureTests/GestionProyecto.ArchitectureTests.csproj" />
 </Solution>

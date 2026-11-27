@@ -1,8 +1,7 @@
 using GestionProyecto.Domain.Entities;
 using GestionProyecto.Domain.Enums;
-using Xunit;
 
-namespace GestionProyecto.UnitTests.Domain;
+namespace GestionProyecto.Domain.UnitTests.Entities;
 
 public class TareaTests
 {
@@ -75,5 +74,27 @@ public class TareaTests
         Assert.Equal("Nueva desc", tarea.Descripcion);
         Assert.Equal(PrioridadTarea.Alta, tarea.Prioridad);
         Assert.Equal(nuevaFecha, tarea.FechaLimite);
+    }
+
+    [Fact]
+    public void CrearTarea_ConFechaLocal_NormalizaAUtc()
+    {
+        var fechaLocal = new DateTime(2026, 12, 15, 10, 0, 0, DateTimeKind.Local);
+        var tarea = new Tarea("Titulo", "Desc", PrioridadTarea.Media, fechaLocal, Guid.NewGuid());
+
+        Assert.Equal(DateTimeKind.Utc, tarea.FechaLimite.Kind);
+        Assert.Equal(fechaLocal.ToUniversalTime(), tarea.FechaLimite);
+    }
+
+    [Fact]
+    public void Actualizar_ConDatosInvalidos_LanzaArgumentException()
+    {
+        var tarea = new Tarea("Inicial", "Desc", PrioridadTarea.Baja, DateTime.UtcNow.AddDays(1), Guid.NewGuid());
+        var fechaValida = DateTime.UtcNow.AddDays(5);
+
+        Assert.Throws<ArgumentException>(() => tarea.Actualizar("", "Desc", PrioridadTarea.Alta, fechaValida));
+        Assert.Throws<ArgumentException>(() => tarea.Actualizar("Titulo", " ", PrioridadTarea.Alta, fechaValida));
+        Assert.Throws<ArgumentException>(() => tarea.Actualizar("Titulo", "Desc", (PrioridadTarea)99, fechaValida));
+        Assert.Throws<ArgumentException>(() => tarea.Actualizar("Titulo", "Desc", PrioridadTarea.Alta, default));
     }
 }

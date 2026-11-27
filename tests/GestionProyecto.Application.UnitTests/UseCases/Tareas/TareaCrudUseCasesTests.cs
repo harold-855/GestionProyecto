@@ -6,11 +6,10 @@ using GestionProyecto.Application.UseCases.Tareas;
 using GestionProyecto.Domain.Entities;
 using GestionProyecto.Domain.Enums;
 using Moq;
-using Xunit;
 
-namespace GestionProyecto.UnitTests.Application;
+namespace GestionProyecto.Application.UnitTests.UseCases.Tareas;
 
-public class TareaUseCasesTests
+public class TareaCrudUseCasesTests
 {
     private readonly Mock<ITareaRepository> _tareaRepoMock = new();
     private readonly Mock<IProyectoRepository> _proyectoRepoMock = new();
@@ -75,48 +74,46 @@ public class TareaUseCasesTests
 
         Assert.True(ok);
         Assert.Equal(EstadoTarea.Completada, tarea.Estado);
+        _tareaRepoMock.Verify(r => r.Actualizar(tarea), Times.Once);
         _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ObtenerTareasPorProyecto_CuandoProyectoNoExiste_LanzaNotFoundException()
+    public async Task CambiarEstadoTarea_CuandoNoExiste_RetornaFalse()
     {
-        _proyectoRepoMock.Setup(r => r.ObtenerPorIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((Proyecto?)null);
+        _tareaRepoMock.Setup(r => r.ObtenerPorIdAsync(It.IsAny<Guid>())).ReturnsAsync((Tarea?)null);
 
-        var useCase = new ObtenerTareasPorProyectoUseCase(_tareaRepoMock.Object, _proyectoRepoMock.Object);
+        var useCase = new CambiarEstadoTareaUseCase(_tareaRepoMock.Object, _unitOfWorkMock.Object);
+        var ok = await useCase.EjecutarAsync(Guid.NewGuid(), EstadoTarea.Completada);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => useCase.EjecutarAsync(Guid.NewGuid()));
+        Assert.False(ok);
+        _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task FiltrarTareas_Combinado_ValidaEnumsYConsultaRepositorio()
+    public async Task ActualizarYEliminarTarea_CuandoExiste_ActualizaYElimina()
     {
-        var tarea = new Tarea("T", "D", PrioridadTarea.Alta, DateTime.UtcNow.AddDays(3), Guid.NewGuid());
-        _tareaRepoMock.Setup(r => r.ObtenerPorFiltroAsync(EstadoTarea.Pendiente, PrioridadTarea.Alta))
-            .ReturnsAsync(new List<Tarea> { tarea });
+        var tarea = new Tarea("Inicial", "Desc", PrioridadTarea.Baja, DateTime.UtcNow.AddDays(1), Guid.NewGuid());
+        _tareaRepoMock.Setup(r => r.ObtenerPorIdAsync(tarea.Id)).ReturnsAsync(tarea);
 
-        var useCase = new FiltrarTareasUseCase(_tareaRepoMock.Object);
-        var resultado = await useCase.EjecutarAsync(EstadoTarea.Pendiente, PrioridadTarea.Alta);
+        var actualizar = new ActualizarTareaUseCase(_tareaRepoMock.Object, _unitOfWorkMock.Object);
+        var eliminar = new EliminarTareaUseCase(_tareaRepoMock.Object, _unitOfWorkMock.Object);
 
-        Assert.Single(resultado);
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            useCase.EjecutarAsync((EstadoTarea)99, null));
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            useCase.EjecutarAsync(null, (PrioridadTarea)99));
-    }
+        var actualizada = await actualizar.EjecutarAsync(tarea.Id, new ActualizarTareaDto
+        {
+            Titulo = "Actualizada",
+            Descripcion = "Nueva",
+            Prioridad = PrioridadTarea.Alta,
+            FechaLimite = DateTime.UtcNow.AddDays(4)
+        });
+        var eliminada = await eliminar.EjecutarAsync(tarea.Id);
 
-    [Fact]
-    public async Task ObtenerTareasVencidas_RetornaMapeadasConEstaVencidaTrue()
-    {
-        var tareaVencida = new Tarea("Vencida", "D", PrioridadTarea.Alta, DateTime.UtcNow.AddDays(-1), Guid.NewGuid());
-        _tareaRepoMock.Setup(r => r.ObtenerVencidasAsync()).ReturnsAsync(new List<Tarea> { tareaVencida });
-
-        var useCase = new ObtenerTareasVencidasUseCase(_tareaRepoMock.Object);
-        var resultado = await useCase.EjecutarAsync();
-
-        var item = Assert.Single(resultado);
-        Assert.True(item.EstaVencida);
+        Assert.True(actualizada);
+        Assert.True(eliminada);
+        Assert.Equal("Actualizada", tarea.Titulo);
+        _tareaRepoMock.Verify(r => r.Actualizar(tarea), Times.Once);
+        _tareaRepoMock.Verify(r => r.Eliminar(tarea), Times.Once);
+        _unitOfWorkMock.Verify(u => u.GuardarCambiosAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

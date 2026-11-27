@@ -13,9 +13,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Xunit;
 
-namespace GestionProyecto.IntegrationTests;
+namespace GestionProyecto.Api.IntegrationTests.Fixtures;
 
 /// <summary>
 /// Levanta la API completa sobre Kestrel en un puerto efímero con EF Core InMemory para pruebas end-to-end.
@@ -33,7 +32,7 @@ public sealed class ApiTestFactory : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var dbName = $"GestionProyecto_Integration_{Guid.NewGuid()}";
+        var dbName = $"GestionProyecto_ApiIntegration_{Guid.NewGuid()}";
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -43,7 +42,6 @@ public sealed class ApiTestFactory : IAsyncLifetime
         builder.WebHost.UseUrls("http://127.0.0.1:0");
 
         builder.Services.AddApiPresentation();
-
         builder.Services.AddApplication();
 
         builder.Services.AddDbContext<GestionProyectoDbContext>(options =>

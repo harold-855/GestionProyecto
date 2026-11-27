@@ -11,7 +11,7 @@ API RESTful desarrollada con **.NET 10**, **Clean Architecture**, **Entity Frame
 - [Modelo de Dominio y Reglas de Negocio](#-modelo-de-dominio-y-reglas-de-negocio)
 - [Endpoints de la API](#-endpoints-de-la-api)
 - [Manejo Global de Excepciones](#-manejo-global-de-excepciones)
-- [Pruebas Unitarias e Integrales](#-pruebas-unitarias-e-integrales)
+- [Pruebas Automatizadas](#-pruebas-automatizadas)
 - [Ejecución Local](#-ejecución-local)
 - [CI/CD y Despliegue en Azure](#-cicd-y-despliegue-en-azure)
 
@@ -45,8 +45,11 @@ GestionProyecto/
 │   ├── GestionProyecto.Infrastructure/    # DbContext EF Core (PostgreSQL), migraciones y repositorios
 │   └── GestionProyecto.Api/               # Controladores REST, middleware global y Program.cs
 └── tests/
-    ├── GestionProyecto.UnitTests/         # Pruebas unitarias (xUnit + Moq)
-    └── GestionProyecto.IntegrationTests/  # Pruebas end-to-end HTTP sobre Kestrel + EF InMemory
+    ├── GestionProyecto.Domain.UnitTests/              # Pruebas unitarias de entidades y reglas de dominio
+    ├── GestionProyecto.Application.UnitTests/         # Pruebas unitarias de casos de uso (xUnit + Moq)
+    ├── GestionProyecto.Infrastructure.IntegrationTests/ # Pruebas de DbContext, configuraciones y repositorios
+    ├── GestionProyecto.Api.IntegrationTests/          # Pruebas end-to-end HTTP sobre Kestrel + EF InMemory
+    └── GestionProyecto.ArchitectureTests/             # Pruebas de dependencias de capas y convenciones
 ```
 
 ### Detalle de capas
@@ -128,17 +131,27 @@ El middleware [`ExceptionHandlingMiddleware`](src/GestionProyecto.Api/Middleware
 
 ---
 
-## Pruebas Unitarias e Integrales
+## Pruebas Automatizadas
 
-El repositorio cuenta con **37 pruebas automatizadas** divididas en dos proyectos:
+La solución organiza las pruebas en **5 proyectos especializados** bajo `tests/`:
 
-- **Pruebas Unitarias** (`tests/GestionProyecto.UnitTests/`) — **32 pruebas** (`xUnit` + `Moq`):
-  - `Domain/ProyectoTests.cs`: Validaciones, normalización UTC, gestión de colección de tareas, cálculo de avance y verificación de tareas pendientes.
-  - `Domain/TareaTests.cs`: Validaciones, cambios de estado y lógica de vencimiento.
-  - `Application/ProyectoUseCasesTests.cs`: Todos los casos de uso de proyectos con repositorios mockeados.
-  - `Application/TareaUseCasesTests.cs`: Todos los casos de uso de tareas, filtros y excepciones.
-- **Pruebas Integrales** (`tests/GestionProyecto.IntegrationTests/`) — **5 escenarios end-to-end** (`xUnit` + Kestrel real + `EF Core InMemory`):
-  - `ApiTestFactory.cs` y `ApiIntegrationTests.cs`: Prueban el pipeline HTTP completo (ruteo, JSON, validaciones, middleware de excepciones, Swagger, `/health`, cálculo de avance, bloqueo `409` al eliminar proyectos con tareas pendientes, filtros combinados y tareas vencidas).
+- **`GestionProyecto.Domain.UnitTests`**:
+  - `Entities/ProyectoTests.cs`: Validaciones, normalización UTC, gestión de colección de tareas, cálculo de avance y verificación de tareas pendientes.
+  - `Entities/TareaTests.cs`: Validaciones, cambios de estado, actualización y lógica de vencimiento.
+- **`GestionProyecto.Application.UnitTests`** (`xUnit` + `Moq`):
+  - `UseCases/Proyectos/ProyectoUseCasesTests.cs`: Casos de uso de proyectos con repositorios mockeados.
+  - `UseCases/Tareas/TareaCrudUseCasesTests.cs`: Casos de uso de creación, actualización, cambio de estado y eliminación de tareas.
+  - `UseCases/Tareas/TareaConsultasUseCasesTests.cs`: Casos de uso de consulta, filtrado y tareas vencidas.
+- **`GestionProyecto.Infrastructure.IntegrationTests`** (`xUnit` + `EF Core InMemory`):
+  - `Persistence/ModelConfigurationTests.cs`: Verificación de configuraciones Fluent API (`ProyectoConfiguration`, `TareaConfiguration`).
+  - `Repositories/ProyectoRepositoryTests.cs`, `Repositories/TareaRepositoryTests.cs`, `Repositories/UnitOfWorkTests.cs`: Persistencia, filtros y `SaveChangesAsync`.
+- **`GestionProyecto.Api.IntegrationTests`** (`xUnit` + Kestrel real + `EF Core InMemory`):
+  - `Endpoints/SwaggerAndHealthTests.cs`: Verificación de `/health`, Swagger y rutas `/api/v1/...` en minúsculas.
+  - `Endpoints/ProyectosEndpointsTests.cs` y `Endpoints/TareasEndpointsTests.cs`: Flujos end-to-end CRUD, avance y filtros.
+  - `Middleware/ErrorHandlingTests.cs`: Validaciones y respuestas `ProblemDetails` RFC 7807.
+- **`GestionProyecto.ArchitectureTests`**:
+  - `Layers/LayerDependencyTests.cs`: Reglas de dependencia entre Domain, Application, Infrastructure y Api.
+  - `Conventions/DomainAndApplicationConventionsTests.cs` y `Conventions/ApiConventionsTests.cs`: Convenciones de entidades, casos de uso, repositorios, controladores y rutas versionadas en minúsculas.
 
 Ejecutar toda la suite:
 
@@ -179,7 +192,7 @@ dotnet test GestionProyecto.slnx --configuration Release --verbosity normal
 
 El pipeline definido en [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) se ejecuta automáticamente en cada `push` y `pull_request` hacia `main`:
 
-1. **Job `build-and-test`:** Restaura dependencias, compila en configuración `Release`, ejecuta las 37 pruebas unitarias e integrales y publica el artefacto de la API.
+1. **Job `build-and-test`:** Restaura dependencias, compila en configuración `Release`, ejecuta toda la suite de pruebas y publica el artefacto de la API.
 2. **Job `deploy`:** En eventos `push` sobre `main`, descarga el artefacto publicado y despliega en **Azure App Service** mediante `azure/webapps-deploy@v3` cuando los secretos están configurados.
 
 ### Configuración requerida en GitHub y Azure
